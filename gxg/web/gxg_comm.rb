@@ -642,7 +642,19 @@ module GxG
                     false
                 end
             end
-            #
+            # Service Call Event Support:
+            def call_event(service=:core, op_frame={:noop => nil}, error_handler=nil, &the_handler)
+                if self.open?
+                    if op_frame.is_a?(::Hash) && the_handler
+                        self.pull_data({:call_event => {:service => service.to_s, :op_frame => op_frame}},error_handler) do |data|
+                            the_handler.call(data)
+                        end
+                        true
+                    else
+                        false
+                    end
+                end
+            end
             # Libarary Loading Support:
             def library_pull(details={}, error_handler=nil, &the_handler)
                 if self.open?
