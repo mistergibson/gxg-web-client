@@ -2128,3 +2128,25 @@ module GxG
         #
     end
 end
+#
+class Object
+    private
+    def new_component(the_format_moniker=nil)
+        result = nil
+        if the_format_moniker
+            if ::GxG::Gui::component_registered?(the_format_moniker.to_s.to_sym)
+                result = ::GxG::Database::DetachedHash.new
+                result[:component] = the_format_moniker.to_s
+                result[:settings] = {}
+                result[:options] = {}
+                result[:script] = ""
+                result[:content] = []
+            else
+                log_error("Component #{the_format_moniker.inspect} not registered.")
+            end
+        else
+            log_error("You MUST specify a registered component moniker.")
+        end
+        result
+    end
+end

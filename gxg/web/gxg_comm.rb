@@ -170,6 +170,68 @@ module GxG
                 true
             end
             #
+            def post(form_data="", options={}, &handler)
+                # Uses POST method, with data payload
+                if @active
+                    if form_data.is_a?(::GxG::Gui::Form)
+                        action = form_data.get_attribute("action").to_s
+                        if action.size > 0
+                            if @relative_url.to_s.size > 0
+                                the_url = "#{@host_prefix}#{@relative_url.to_s}#{action.to_s}?display=#{@display_path.to_s}"
+                            else
+                                the_url = "#{@host_prefix}#{action.to_s}?display=#{@display_path.to_s}"
+                            end
+                        else
+                            if @relative_url.to_s.size > 0
+                                the_url = "#{@host_prefix}#{@relative_url.to_s}?display=#{@display_path.to_s}"
+                            else
+                                the_url = "#{@host_prefix}?display=#{@display_path.to_s}"
+                            end
+                        end
+                        the_xhr = `new XMLHttpRequest`
+                        `#{the_xhr}.open('POST',#{the_url},true)`
+                        `#{the_xhr}.timeout = #{(options[:timeout] || 5000)}`
+                        `#{the_xhr}.setRequestHeader('X-Requested-With','XMLHttpRequest')`
+                        `#{the_xhr}.setRequestHeader('Accept','application/json')`
+                        `#{the_xhr}.setRequestHeader('X-CSRF-Token', #{@csrf})`
+                        `#{the_xhr}.setRequestHeader('Content-Type', 'multipart/form-data')`
+                        failed = Proc.new do |reason={:error => "unknown"}|
+                            log_error(reason)
+                        end
+                        succeeded = Proc.new do
+                            response_code = (`#{the_xhr}.status`).to_i
+                            if response_code < 300
+                                begin
+                                    the_response = (::JSON.parse(`#{the_xhr}.response`,{:symbolize_names => true}))
+                                    log_info(the_response.inspect)
+                                    if handler.respond_to?(:call)
+                                        handler.call(the_response)
+                                    end
+                                rescue Exception => the_error
+                                    log_error({:error => the_error, :parameters => `#{the_xhr}.response`})
+                                end
+                            else
+                                begin
+                                    failed.call(::JSON.parse(`#{the_xhr}.response`,{:symbolize_names => true}))
+                                rescue Exception => the_error
+                                    log_error({:error => the_error, :parameters => `#{the_xhr}.response`})
+                                end
+                            end
+                        end
+                        `#{the_xhr}.addEventListener('load', #{succeeded})`
+                        `#{the_xhr}.addEventListener('error', #{failed})`
+                        `#{the_xhr}.addEventListener('timeout', #{failed})`
+                        `#{the_xhr}.addEventListener('abort', #{failed})`
+                        `#{the_xhr}.send(#{form_data.element})`
+                        #
+                        true
+                    else
+                        false
+                    end
+                end
+                #
+            end
+            #
             def push(the_message=nil, options={})
                 if @active
                     # Uses PUT method, with data payload
@@ -643,7 +705,7 @@ module GxG
                 end
             end
             # Service Call Event Support:
-            def call_event(service=:core, op_frame={:noop => nil}, error_handler=nil, &the_handler)
+            def call_event(service=:core, op_frame={:interface => true}, error_handler=nil, &the_handler)
                 if self.open?
                     if op_frame.is_a?(::Hash) && the_handler
                         self.pull_data({:call_event => {:service => service.to_s, :op_frame => op_frame}},error_handler) do |data|

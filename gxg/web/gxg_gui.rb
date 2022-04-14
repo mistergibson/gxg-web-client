@@ -568,6 +568,107 @@ module GxG
         # Page extensions
         module Vdom
             class Page
+                # File Upload Dialog
+                def upload_dialog(the_application=nil, details=nil, &block)
+                    self.layout_refresh()
+                    # Determine Dialog Details:
+                    window_title = (details || {:title => "Choose a file:"})[:title].to_s
+                    banner_text = (details || {:banner => "Choose a file to upload"})[:banner].to_s
+                    destination_path = (details || {:destination => nil})[:destination].to_s
+                    # Define bounds: (in px)
+                    total_width = (self.layout_content_area()[:page_width].to_f * 0.25).to_i
+                    form_padding = 20
+                    form_margin = 5
+                    inner_width = (total_width - ((form_padding + form_margin) * 2))
+                    total_height = ((form_padding + form_margin) * 2)
+                    #
+                    banner_font_size = 16
+                    if banner_text.to_s.size > 40
+                        banner_height = ((banner_text.size.to_f / 40.0) * banner_font_size.to_f).round.to_i
+                    else
+                        banner_height = banner_font_size
+                    end
+                    input_font_size = 16
+                    #
+                    if destination_path.size > 0
+                        # Main Build:
+                        form = new_component(:"org.gxg.gui.form")
+                        form[:options][:action] = "/file_upload"
+                        form[:options][:method] = "POST"
+                        form[:options][:enctype] = "multipart/form-data"
+                        form[:options][:style] = {:"background-color" => "#f2f2f2", :padding => "20px", :margin => "5px", :width => "100%"}
+                        #
+                        total_height = 330
+                        #
+                        file_input = new_component(:"org.gxg.gui.input.file")
+                        file_input.title = "file"
+                        file_input[:options][:name] = "file"
+                        form[:content] << file_input
+                        #
+                        destination = new_component(:"org.gxg.gui.input.hidden")
+                        destination.title = "destination"
+                        destination[:options][:name] = "destination"
+                        destination[:options][:value] = destination_path
+                        form[:content] << destination
+                        #
+                        grid_container = new_component(:"org.gxg.gui.grid.container")
+                        cancel_frame = new_component(:"org.gxg.gui.grid.x")
+                        submit_frame = new_component(:"org.gxg.gui.grid.x")
+                        cancel_button = new_component(:"org.gxg.gui.input.button")
+                        submit_button = new_component(:"org.gxg.gui.input.button.submit")
+                        cancel_frame[:content] << cancel_button
+                        submit_frame[:content] << submit_button
+                        grid_container[:content] << cancel_frame
+                        grid_container[:content] << submit_frame
+                        form[:content] << grid_container
+                        #
+                        cancel_button[:script] = "
+                        on(:mouseup) do |event|
+                            the_window = self.find_parent_type(::GxG::Gui::DialogBox)
+                            form = self.find_parent_type(::GxG::Gui::Form)
+                            if the_window && form
+                                the_window.respond({:action => :cancel})
+                            end
+                        end
+                        "
+                        #
+                        submit_button[:script] = "
+                        on(:mouseup) do |event|
+                            the_window = self.find_parent_type(::GxG::Gui::DialogBox)
+                            form = self.find_parent_type(::GxG::Gui::Form)
+                            if the_window && form
+                                page.set_busy true
+                                ::GxG::CONNECTION.post(form) do |response|
+                                    page.set_busy false
+                                    the_window.respond({:action => :upload, :destination => form.form_data[:destination].to_s})
+                                end
+                            end
+                        end
+                        "
+                        #
+                        viewport = new_component(:"org.gxg.gui.application.viewport")
+                        viewport.title = "gxg_selection_viewport"
+                        viewport[:options][:style] = {:overflow => "hidden", :width => "100%", :height => "100%"}
+                        viewport[:content] << form
+                        #
+                        dialog_source = new_component(:"org.gxg.gui.window.dialog")
+                        dialog_source.title = window_title
+                        dialog_source[:options] = {:window_title => window_title, :states => {:hidden => true}, :width => 350, :height => total_height}
+                        dialog_source[:content] << viewport
+                        #
+                        begin
+                            self.dialog_open(dialog_source, the_application, details, &block)
+                            true
+                        rescue Exception => the_error
+                            log_error({:error => the_error, :parameters => details})
+                            false
+                        end
+                        #
+                    else
+                        log_error("You MUST provide a destination path")
+                        false
+                    end
+                end
                 # Choice Dialog
                 def choice_dialog(the_application=nil, details=nil, &block)
                     # details: {:type => :choose, :title => "Some Title", :banner => "Some Text Here"}
@@ -812,27 +913,18 @@ module GxG
                     end
                     "
                     #
-                    menu_bar = ::GxG::Database::DetachedHash.new
+                   
+                    menu_bar =  new_component(:"org.gxg.gui.menu.bar")
                     menu_bar.title = "gxg_path_menu_bar"
-                    menu_bar[:component] = "org.gxg.gui.menu.bar"
                     menu_bar[:settings] = {:path => (details[:path] || "/")}
-                    menu_bar[:options] = {}
-                    menu_bar[:script] = ""
-                    menu_bar[:content] = []
                     #
-                    menu_header = ::GxG::Database::DetachedHash.new
+                    menu_header = new_component(:"org.gxg.gui.menu.item")
                     menu_header.title = "gxg_path_menu_header"
-                    menu_header[:component] = "org.gxg.gui.menu.item"
                     menu_header[:settings] = {:label => File.basename(menu_bar[:settings][:path]), :data => nil}
-                    menu_header[:options] = {}
-                    menu_header[:script] = ""
-                    menu_header[:content] = []
                     #
-                    menu = ::GxG::Database::DetachedHash.new
+                    menu = new_component(:"org.gxg.gui.menu")
                     menu.title = "gxg_path_menu"
-                    menu[:component] = "org.gxg.gui.menu"
                     menu[:settings] = {:item_script => menu_item_script}
-                    menu[:options] = {}
                     menu[:script] = "
                     def update_menu(the_path=nil)
                         if the_path.is_a?(::String)
@@ -862,30 +954,23 @@ module GxG
                         end
                     end
                     "
-                    menu[:content] = []
                     #
                     menu_manifest = []
                     (0..(menu_bar[:settings][:path].split("/").size - 1)).each do |the_index|
                         menu_manifest << (menu_bar[:settings][:path].split("/")[0..(the_index)].join("/"))
                     end
                     menu_manifest.reverse[1..-1].each do |the_path|
-                        the_item = ::GxG::Database::DetachedHash.new
-                        the_item[:component] = "org.gxg.gui.menu.item"
+                        the_item =  new_component(:"org.gxg.gui.menu.item")
                         the_item[:settings] = {:label => File.basename(the_path), :data => the_path}
-                        the_item[:options] = {}
                         the_item[:script] = menu_item_script
-                        the_item[:content] = []
                         menu[:content] << the_item
                     end
                     #
                     menu_header[:content] << menu
                     menu_bar[:content] << menu_header
                     #
-                    menu_bar_cell = ::GxG::Database::DetachedHash.new
-                    menu_bar_cell[:component] = "org.gxg.gui.block.table.cell"
-                    menu_bar_cell[:settings] = {}
+                    menu_bar_cell = new_component(:"org.gxg.gui.block.table.cell")
                     menu_bar_cell[:options] = {:style => {:border => "1px solid #c2c2c2", :padding => "0px", :margin => "0px", :width => "100%"}}
-                    menu_bar_cell[:script] = ""
                     menu_bar_cell[:content] = [(menu_bar)]
                     # SubItem List:
                     list_item_script = "
@@ -911,9 +996,8 @@ module GxG
                         self.select()
                     end
                     "
-                    subitems = ::GxG::Database::DetachedHash.new
+                    subitems = new_component(:"org.gxg.gui.list")
                     subitems.title = "gxg_path_subitems"
-                    subitems[:component] = "org.gxg.gui.list"
                     subitems[:settings] = {:list_item_script => list_item_script}
                     subitems[:options] = {:style => {:clear => "both", :"list-style" => "none", :padding => "0px", :margin => "0px"}}
                     subitems[:script] = "
@@ -1006,8 +1090,7 @@ module GxG
                         end
                     end
                     "
-                    subitems[:content] = []
-                    # xxx
+                    #
                     case dialog_type
                     when :save
                         subitems[:script] = (subitems[:script] + "\n" + "
@@ -1095,39 +1178,24 @@ module GxG
                         ")
                     end
                     #
-                    subitems_container = ::GxG::Database::DetachedHash.new
-                    subitems_container[:component] = "org.gxg.gui.block"
-                    subitems_container[:settings] = {}
+                    subitems_container = new_component(:"org.gxg.gui.block")
                     subitems_container[:options] = {:style => {:width => "100%", :height => "192px", :"overflow-y" => "scroll"}}
-                    subitems_container[:script] = ""
                     subitems_container[:content] = [(subitems)]
                     #
-                    subitems_cell = ::GxG::Database::DetachedHash.new
-                    subitems_cell[:component] = "org.gxg.gui.block.table.cell"
-                    subitems_cell[:settings] = {}
+                    subitems_cell = new_component(:"org.gxg.gui.block.table.cell")
                     subitems_cell[:options] = {:style => {:border => "1px solid #c2c2c2", :padding => "0px", :margin => "0px", :width => "100%"}}
-                    subitems_cell[:script] = ""
                     subitems_cell[:content] = [(subitems_container)]
                     #  Save As ... Field
-                    save_name = ::GxG::Database::DetachedHash.new
+                    save_name = new_component(:"org.gxg.gui.input.text")
                     save_name.title = "gxg_save_name"
-                    save_name[:component] = "org.gxg.gui.input.text"
-                    save_name[:settings] = {}
                     save_name[:options] = {:style => {:"background-color" => "#f2f2f2", :"font-size" => "16px", :width => "100%"}}
-                    save_name[:script] = ""
-                    save_name[:content] = []
                     #
-                    save_name_cell = ::GxG::Database::DetachedHash.new
-                    save_name_cell[:component] = "org.gxg.gui.block.table.cell"
-                    save_name_cell[:settings] = {}
+                    save_name_cell = new_component(:"org.gxg.gui.block.table.cell")
                     save_name_cell[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "100%"}}
-                    save_name_cell[:script] = ""
                     save_name_cell[:content] = [(save_name)]
                     # Buttons:
-                    action_btn = ::GxG::Database::DetachedHash.new
+                    action_btn = new_component(:"org.gxg.gui.input.button.submit")
                     action_btn.title = "gxg_action_button"
-                    action_btn[:component] = "org.gxg.gui.input.button.submit"
-                    action_btn[:settings] = {}
                     action_btn[:options] = {:content => action_title, :style => {:padding => "0px", :width => "80px", :height => "32px"}}
                     action_btn[:script] = "
                     on(:mouseup) do |event|
@@ -1143,19 +1211,13 @@ module GxG
                         end
                     end
                     "
-                    action_btn[:content] = []
                     #
-                    action_cell = ::GxG::Database::DetachedHash.new
-                    action_cell[:component] = "org.gxg.gui.block.table.cell"
-                    action_cell[:settings] = {}
+                    action_cell = new_component(:"org.gxg.gui.block.table.cell")
                     action_cell[:options] = {:style => {:padding => "10px 0px 0px 35px", :margin => "0px", :width => "50%"}}
-                    action_cell[:script] = ""
                     action_cell[:content] = [(action_btn)]
                     #
-                    cancel_btn = ::GxG::Database::DetachedHash.new
+                    cancel_btn = new_component(:"org.gxg.gui.input.button.submit")
                     cancel_btn.title = "gxg_cancel_button"
-                    cancel_btn[:component] = "org.gxg.gui.input.button.submit"
-                    cancel_btn[:settings] = {}
                     cancel_btn[:options] = {:content => "Cancel", :style => {:padding => "2px", :width => "80px", :height => "32px"}}
                     cancel_btn[:script] = "
                     on(:mouseup) do |event|
@@ -1165,79 +1227,48 @@ module GxG
                         end
                     end
                     "
-                    cancel_btn[:content] = []
                     #
-                    cancel_cell = ::GxG::Database::DetachedHash.new
-                    cancel_cell[:component] = "org.gxg.gui.block.table.cell"
-                    cancel_cell[:settings] = {}
+                    cancel_cell = new_component(:"org.gxg.gui.block.table.cell")
                     cancel_cell[:options] = {:style => {:padding => "10px 0px 0px 35px", :margin => "0px", :width => "50%"}}
-                    cancel_cell[:script] = ""
                     cancel_cell[:content] = [(cancel_btn)]
                     #
                     # Rows:
-                    row_one = ::GxG::Database::DetachedHash.new
-                    row_one[:component] = "org.gxg.gui.block.table.row"
-                    row_one[:settings] = {}
+                    row_one = new_component(:"org.gxg.gui.block.table.row")
                     row_one[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "100%"}}
-                    row_one[:script] = ""
                     row_one[:content] = [(menu_bar_cell)]
                     #
-                    row_two = ::GxG::Database::DetachedHash.new
-                    row_two[:component] = "org.gxg.gui.block.table.row"
-                    row_two[:settings] = {}
+                    row_two = new_component(:"org.gxg.gui.block.table.row")
                     row_two[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "100%"}}
-                    row_two[:script] = ""
                     row_two[:content] = [(subitems_cell)]
                     #
-                    row_three = ::GxG::Database::DetachedHash.new
-                    row_three[:component] = "org.gxg.gui.block.table.row"
-                    row_three[:settings] = {}
+                    row_three = new_component(:"org.gxg.gui.block.table.row")
                     row_three[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "100%"}}
-                    row_three[:script] = ""
                     row_three[:content] = [(save_name_cell)]
                     #
-                    row_four = ::GxG::Database::DetachedHash.new
-                    row_four[:component] = "org.gxg.gui.block.table.row"
-                    row_four[:settings] = {}
+                    row_four = new_component(:"org.gxg.gui.block.table.row")
                     row_four[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "100%"}}
-                    row_four[:script] = ""
                     row_four[:content] = [(cancel_cell),(action_cell)]
                     #
                     # Tables:
-                    table_one = ::GxG::Database::DetachedHash.new
-                    table_one[:component] = "org.gxg.gui.block.table"
-                    table_one[:settings] = {}
+                    table_one = new_component(:"org.gxg.gui.block.table")
                     table_one[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "300px", :height => "32px"}}
-                    table_one[:script] = ""
                     table_one[:content] = [(row_one)]
                     #
-                    table_two = ::GxG::Database::DetachedHash.new
-                    table_two[:component] = "org.gxg.gui.block.table"
-                    table_two[:settings] = {}
+                    table_two = new_component(:"org.gxg.gui.block.table")
                     table_two[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "300px", :height => "192px"}}
-                    table_two[:script] = ""
                     table_two[:content] = [(row_two)]
                     #
-                    table_three = ::GxG::Database::DetachedHash.new
-                    table_three[:component] = "org.gxg.gui.block.table"
-                    table_three[:settings] = {}
+                    table_three = new_component(:"org.gxg.gui.block.table")
                     table_three[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "300px", :height => "32px"}}
-                    table_three[:script] = ""
                     table_three[:content] = [(row_three)]
                     #
-                    table_four = ::GxG::Database::DetachedHash.new
-                    table_four[:component] = "org.gxg.gui.block.table"
-                    table_four[:settings] = {}
+                    table_four = new_component(:"org.gxg.gui.block.table")
                     table_four[:options] = {:style => {:padding => "0px", :margin => "0px", :width => "300px", :height => "32px"}}
-                    table_four[:script] = ""
                     table_four[:content] = [(row_four)]
                     #
                     # Main Build:
-                    form = ::GxG::Database::DetachedHash.new
-                    form[:component] = "org.gxg.gui.form"
-                    form[:settings] = {}
+                    form = new_component(:"org.gxg.gui.form")
                     form[:options] = {:style => {:"background-color" => "#f2f2f2", :padding => "20px", :margin => "5px", :width => "100%"}}
-                    form[:script] = ""
                     form[:content] = []
                     #
                     total_height = 330
@@ -1249,20 +1280,14 @@ module GxG
                     end
                     form[:content] << table_four
                     #
-                    viewport = ::GxG::Database::DetachedHash.new
+                    viewport = new_component(:"org.gxg.gui.application.viewport")
                     viewport.title = "gxg_selection_viewport"
-                    viewport[:component] = "org.gxg.gui.application.viewport"
-                    viewport[:settings] = {}
                     viewport[:options] = {:style => {:overflow => "hidden", :width => "100%", :height => "100%"}}
-                    viewport[:script] = ""
                     viewport[:content] = [(form)]
                     #
-                    dialog_source = ::GxG::Database::DetachedHash.new
+                    dialog_source = new_component(:"org.gxg.gui.window.dialog")
                     dialog_source.title = window_title
-                    dialog_source[:component] = "org.gxg.gui.window.dialog"
-                    dialog_source[:settings] = {}
                     dialog_source[:options] = {:window_title => window_title, :states => {:hidden => true}, :width => 350, :height => total_height}
-                    dialog_source[:script] = ""
                     dialog_source[:content] = [(viewport)]
                     #
                     begin
