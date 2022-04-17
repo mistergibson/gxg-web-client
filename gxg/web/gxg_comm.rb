@@ -232,6 +232,17 @@ module GxG
                 #
             end
             #
+            def download_file(the_vfs_path="", error_handler=nil, &the_handler)
+                if self.open?
+                    if the_vfs_path.is_a?(::String) && the_handler
+                        self.pull_data({:download_file => {:path => the_vfs_path}},error_handler, &the_handler)
+                        true
+                    else
+                        false
+                    end
+                end
+            end
+            #
             def push(the_message=nil, options={})
                 if @active
                     # Uses PUT method, with data payload
@@ -353,11 +364,7 @@ module GxG
                 # FOR NOW: limit 100 records returned at a time.
                 # Use: {:limit => 100, :offset => 0} || {:page => 1}
                 if details.is_a?(::Hash) && the_handler
-                    self.pull_data({:search_database => {:criteria => details}},error_handler) do |data|
-                        if data.is_a?(::Hash)
-                            the_handler.call(data)
-                        end
-                    end
+                    self.pull_data({:search_database => {:criteria => details}},error_handler, &the_handler)
                     true
                 else
                     false
@@ -708,9 +715,7 @@ module GxG
             def call_event(service=:core, op_frame={:interface => true}, error_handler=nil, &the_handler)
                 if self.open?
                     if op_frame.is_a?(::Hash) && the_handler
-                        self.pull_data({:call_event => {:service => service.to_s, :op_frame => op_frame}},error_handler) do |data|
-                            the_handler.call(data)
-                        end
+                        self.pull_data({:call_event => {:service => service.to_s, :op_frame => op_frame}}, error_handler,  &the_handler)
                         true
                     else
                         false
