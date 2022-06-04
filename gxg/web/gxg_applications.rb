@@ -438,6 +438,10 @@ module GxG
             end
         end
         #
+        def menu_item_select(data=nil)
+            # override this in your object script.
+        end
+        #
         def run(data={})
             # override this in your object script.
             if data.is_a?(::Hash)

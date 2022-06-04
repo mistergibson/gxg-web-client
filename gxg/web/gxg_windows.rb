@@ -349,7 +349,7 @@ module GxG
                 end
             end
             # Initialization and Setup
-            def initialize(the_parent,the_options)
+            def initialize(the_parent,the_options,other_data={})
                 # FIXME: work around for strange bug in layout_refresh
                 ::GxG::DISPLAY_DETAILS[:object].layout_refresh
                 bounds = GxG::DISPLAY_DETAILS[:object].layout_content_area()
@@ -468,7 +468,7 @@ module GxG
                     @menu_margin = 0
                 end
                 #
-                super(the_parent,the_options)
+                super(the_parent,the_options, other_data)
                 #
                 # self.gxg_set_attribute(:draggable,true)
                 #
@@ -1367,7 +1367,7 @@ module GxG
             end
             #
             # Initialization and Setup
-            def initialize(the_parent, the_options)
+            def initialize(the_parent, the_options, other_data={})
                 # FIXME: work around for strange bug in layout_refresh
                 # ::GxG::DISPLAY_DETAILS[:object].layout_refresh
                 # bounds = GxG::DISPLAY_DETAILS[:object].layout_content_area()
@@ -1466,7 +1466,7 @@ module GxG
                 @responder = nil
                 @data = {}
                 #
-                super(the_parent, the_options)
+                super(the_parent, the_options,other_data)
                 #
                 self.set_attribute(:draggable,false)
                 #

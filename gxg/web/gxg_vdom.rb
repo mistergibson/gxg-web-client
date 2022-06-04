@@ -350,14 +350,14 @@ module GxG
               #   Recognized keys are:
               #     prepend Prepend the new element before this DOM element
               #     content Add the value of content as a textnode to the DOM element
-              def add_child(options={})
+              def add_child(options={},other_data={})
                 new_child = nil
                 if options[:component].to_s.downcase.to_sym == :unknown
                     raise "Unknown Component Type"
                 else
                     element_class = GxG::Gui::component_class(options[:component].to_s.downcase.to_sym)
                     if element_class.is_a?(::Class)
-                        new_child = element_class.new(self,options)
+                        new_child = element_class.new(self,options,other_data)
                         @children[(new_child.title.to_s.to_sym)] = new_child
                         # Register Object with Page
                         ::GxG::DISPLAY_DETAILS[:object].register_object(new_child.title, new_child)
@@ -1916,25 +1916,44 @@ module GxG
               #
               # @param [String] parent The parent Ruby element
               # @param [Hash] options Any options for the creation process
-              def initialize(parent, options = {})
+              def initialize(parent, options={}, other_data={})
                 if options.is_a?(GxG::Database::DetachedHash)
                     @uuid = options.uuid.to_s.to_sym
-                    @title = options.title.to_s
+                    if options[:title].to_s.size > 0
+                        @title = options[:title].to_s
+                    else
+                        @title = options.title.to_s
+                    end
                 else
                     @uuid = (options[:uuid] || ::GxG::uuid_generate()).to_s.to_sym
                     @title = (options[:title] || "Untitled Component #{@uuid.to_s}").to_s
                 end
                 @component = (options[:component] || :unknown).to_s.downcase.to_sym
                 @parent   = parent
-                @settings = options[:settings]
+                #
+                if options[:settings].is_a?(GxG::Database::DetachedHash)
+                    @settings = options[:settings].unpersist
+                else
+                    if options[:settings].is_a?(::Hash)
+                        @settings = options[:settings]
+                    else
+                        @settings = {}
+                    end
+                end
+                #
+                if other_data[:application]
+                    @application = other_data[:application]
+                else
+                    @application = nil
+                end
                 @children = {}
                 @element  = nil
                 @domtype  = :div
                 # ### CSS states
                 @states = {}
                 @states[(@component.to_s.gsub(".","-").to_sym)] = true
-                if options[:options].is_a?(::Hash, GxG::Database::DetachedHash)
-                    if options[:options][:states].is_a?(::Array, GxG::Database::DetachedArray)
+                if options[:options].is_any?(::Hash, GxG::Database::DetachedHash)
+                    if options[:options][:states].is_any?(::Array, GxG::Database::DetachedArray)
                         options[:options][:states].each do |the_state|
                             @states[(the_state.to_s.to_sym)] = true
                         end
@@ -2294,26 +2313,32 @@ module GxG
                             record = build_queue.shift
                             if record
                                 record[:content].each do |the_entry|
-                                    new_object = record[:parent].add_child(the_entry)
+                                    new_object = record[:parent].add_child(the_entry, options)
                                     if the_entry[:content].size > 0
                                         build_queue << {:parent => new_object, :content => the_entry[:content]}
                                     end
-                                    # Embed new object settings
-                                    # new_object.set_settings(the_entry[:settings])
                                     # Link viewport to provided application
-                                    if the_entry[:component].to_s.downcase.to_sym == :application_viewport && options[:application]
+                                    if the_entry[:component].to_s.downcase.to_sym == :"org.gxg.gui.application.viewport" && options[:application]
                                         new_object.set_application(options[:application])
                                         unless options[:application].get_viewport(new_object.uuid)
                                             options[:application].link_viewport(new_object)
                                         end
                                     end
                                     # Link window to provided application
-                                    if the_entry[:component].to_s.downcase.to_sym == :window && options[:application]
+                                    if the_entry[:component].to_s.downcase.to_sym == :"org.gxg.gui.window" && options[:application]
                                         options[:application].link_window(new_object)
                                         new_object.set_application(options[:application])
                                     end
                                     # Link dialog_box to provided application
-                                    if the_entry[:component].to_s.downcase.to_sym == :dialog_box && options[:application]
+                                    if the_entry[:component].to_s.downcase.to_sym == :"org.gxg.gui.window.dialog" && options[:application]
+                                        new_object.set_application(options[:application])
+                                    end
+                                    # Link org.gxg.gui.menu.bar to provided application
+                                    if the_entry[:component].to_s.downcase.to_sym == :"org.gxg.gui.menu.bar" && options[:application]
+                                        new_object.set_application(options[:application])
+                                    end
+                                    # Link org.gxg.gui.menu to provided application
+                                    if the_entry[:component].to_s.downcase.to_sym == :"org.gxg.gui.menu" && options[:application]
                                         new_object.set_application(options[:application])
                                     end
                                     # Window Content Tracking

@@ -235,7 +235,31 @@ module GxG
             def download_file(the_vfs_path="", error_handler=nil, &the_handler)
                 if self.open?
                     if the_vfs_path.is_a?(::String) && the_handler
-                        self.pull_data({:download_file => {:path => the_vfs_path}},error_handler, &the_handler)
+                        the_message = new_message({:download_file => {:path => the_vfs_path}})
+                        the_message[:sender] = @uuid
+                        the_message[:to] = @remote_uuid
+                        if error_handler.respond_to?(:call)
+                            the_message.on(:fail,&error_handler)
+                        end
+                        the_message.on(:success) do |response|
+                            if response.is_a?(::Hash)
+                                file_name = response[:result][:file_name].to_s
+                                file_data = response[:result][:file_data].decode64
+                                %x{
+                                    const streamSaver = window.streamSaver
+                                    const fileStream = streamSaver.createWriteStream(#{file_name}, {})
+                                    const writer = fileStream.getWriter()
+                                    const uInt8 = new TextEncoder().encode(#{file_data})
+                                    writer.write(uInt8)
+                                    writer.close()
+                                }
+                                the_handler.call(true)
+                            else
+                                the_handler.call(false)
+                            end
+                        end
+                        GxG::CONNECTION.pull(the_message)
+                        #
                         true
                     else
                         false
@@ -321,7 +345,9 @@ module GxG
                             if response_code < 300
                                 begin
                                     the_message.succeed(::JSON.parse(`#{the_xhr}.response`,{:symbolize_names => true}))
+                                    # log_info "got data"
                                 rescue Exception => the_error
+                                    # log_warn "Parse Error"
                                     log_error({:error => the_error, :parameters => `#{the_xhr}.response`})
                                 end
                             else

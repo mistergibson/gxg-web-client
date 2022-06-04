@@ -1523,6 +1523,13 @@ module GxG
         ::GxG::Gui::register_component_class(:"org.gxg.gui.dropdown.menu", ::GxG::Gui::DropdownMenu)
         #
         class MenuBar < ::GxG::Gui::DropdownMenu
+            def set_application(the_application=nil)
+                @application = the_application
+            end
+            #
+            def application()
+                @application
+            end
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.menu.bar", ::GxG::Gui::MenuBar)
         #
@@ -1536,14 +1543,18 @@ module GxG
             end
             #
             def add_menu_item(label=nil, data=nil)
-                the_item = ::GxG::Database::DetachedHash.new
-                the_item[:component] = "org.gxg.gui.menu.item"
+                the_item = new_component(:"org.gxg.gui.menu.item")
                 the_item[:settings] = {:label => label, :data => data}
-                the_item[:options] = {}
-                the_item[:script] = ""
-                the_item[:content] = []
                 page.build_components(self, [(the_item)])
                 true
+            end
+            #
+            def set_application(the_application=nil)
+                @application = the_application
+            end
+            #
+            def application()
+                @application
             end
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.menu", ::GxG::Gui::Menu)
@@ -1562,23 +1573,15 @@ module GxG
             #
             def cascade
                 #
-                label = ::GxG::Database::DetachedHash.new
+                label = new_component(:"org.gxg.gui.link.anchor")
                 label.title = "label #{@uuid.to_s}"
-                label[:component] = "anchor"
-                label[:settings] = {}
                 # label[:options] = {:href => "#0", :content => (@settings[:label] || "Untitled").to_s}
                 label[:options] = {:content => (@settings[:label] || "Untitled").to_s}
                 label[:script] = "
                 on(:mouseup) do |event|
-                    menu_item = self.find_parent_type(::GxG::Gui::MenuItem)
-                    if menu_item
-                        unless menu_item.get_state(:disabled) == true
-                            menu_item.select()
-                        end
-                    end
+                    @parent.selecct()
                 end
                 "
-                label[:content] = []
                 #
                 page.build_components(self, [(label)])
                 the_object = page.find_object_by("label #{@uuid.to_s}")
@@ -1599,7 +1602,10 @@ module GxG
             end
             #
             def select(data=nil)
-                # override in object script
+                application = @parent.application()
+                if application
+                    application.menu_item_select(@settings[:data])
+                end
             end
             #
         end
@@ -2034,7 +2040,7 @@ module GxG
                 @tab_content = self.add_child({:component => "org.gxg.gui.block", :title => ("tab_content" + @uuid.to_s), :settings => {}, :options => {:"data-tabs-content" => (@tabs.uuid.to_s), :states => ["tabs-content"]}, :script =>"", :content => []})
                 `$(document).foundation()`
             end
-            def add_child(options={})
+            def add_child(options={}, other_data={})
                 new_child = nil
                 if options[:component].to_s.downcase.to_sym == :tab_content
                     new_child = @tab_content.add_child(options)

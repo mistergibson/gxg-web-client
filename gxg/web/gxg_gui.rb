@@ -1,5 +1,54 @@
 module GxG
     module Gui
+        class ApplicationViewport  < ::GxG::Gui::Vdom::BaseElement
+            #
+            def _before_create
+                @domtype = :div
+                super()
+            end
+            #
+            def set_application(the_application)
+                @application = the_application
+            end
+            #
+            def application()
+                @application
+            end
+            #
+            def find_child(the_reference=nil)
+                result = nil
+                if the_reference
+                    search_queue = [(self)]
+                    while search_queue.size > 0 do
+                        entry = search_queue.shift
+                        if entry
+                            if GxG::valid_uuid?(the_reference)
+                                if entry.children[(object_source.uuid())]
+                                    result = entry.children[(object_source.uuid())]
+                                    break
+                                else
+                                    entry.each_child do |the_child|
+                                        search_queue << the_child
+                                    end
+                                end
+                            else
+                                entry.each_child do |the_child|
+                                    if the_child.title == the_reference
+                                        result = the_child
+                                        break
+                                    else
+                                        search_queue << the_child
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                result
+            end
+        end
+        ::GxG::Gui::register_component_class(:"org.gxg.gui.application.viewport", ::GxG::Gui::ApplicationViewport)
+        #
         class Tree < ::GxG::Gui::Vdom::BaseElement
             #
             alias :original_add_child :add_child
@@ -68,13 +117,9 @@ module GxG
             #
             def cascade()
                 #
-                interior_component = ::GxG::Database::DetachedHash.new
+                interior_component = new_component(:"org.gxg.gui.list")
                 interior_component.title = "content #{@uuid.to_s}"
-                interior_component[:component] = "org.gxg.gui.list"
-                interior_component[:settings] = {}
                 interior_component[:options] = {:style => {:"white-space" => "nowrap", :width => "auto", :height => "auto", :"list-style" => "none", :margin => "0px", :padding => "0px"}}
-                interior_component[:script] = ""
-                interior_component[:content] = []
                 #
                 @content = nil
                 page.build_components(self,[(interior_component)])
@@ -86,7 +131,7 @@ module GxG
                 #
             end
             #
-            def update_appearance()
+            def update_appearance(data=nil)
                 # TODO ??
             end
             # Selection / Processing:
@@ -272,7 +317,7 @@ module GxG
                 result
             end
             #
-            def update_appearance()
+            def update_appearance(data=nil)
                 if @appearance.is_any?(::Hash, ::GxG::Database::DetachedHash)
                     #
                     # TODO: update icon and label if different ??
@@ -325,24 +370,16 @@ module GxG
             end
             #
             def cascade()
+                # ???
+                node_frame = new_component(:"org.gxg.gui.block.table")
+                # FIXME: can app access node settings ??
+                node_frame[:settings][:nodepath] = self.node_path()
+                # node_frame[:options] = {:nodepath => (self.node_path()), :style => {}}
                 #
-                node_frame = ::GxG::Database::DetachedHash.new
-                node_frame[:component] = "org.gxg.gui.block.table"
-                node_frame[:settings] = {}
-                node_frame[:options] = {:nodepath => (self.node_path()), :style => {}}
-                node_frame[:script] = ""
+                frame_row_one = new_component(:"org.gxg.gui.block.table")
                 #
-                frame_row_one = ::GxG::Database::DetachedHash.new
-                frame_row_one[:component] = "org.gxg.gui.block.table"
-                frame_row_one[:settings] = {}
-                frame_row_one[:options] = {}
-                frame_row_one[:script] = ""
-                frame_row_one[:content] = []
-                #
-                expander = ::GxG::Database::DetachedHash.new
+                expander = new_component(:"org.gxg.gui.image")
                 expander.title = "expander #{@uuid.to_s}"
-                expander[:component] = "org.gxg.gui.image"
-                expander[:settings] = {}
                 expander[:options] = {:src=>(theme_widget("collapse.svg")), :width=>32, :height=>32, :style => {:clear => "both", :'vertical-align' => 'middle'}}
                 expander[:script] = "
                 on(:mouseup) do |event|
@@ -362,19 +399,14 @@ module GxG
                     end
                 end
                 "
-                expander[:content] = []
                 #
                 node_expander_cell = ::GxG::Database::DetachedHash.new
-                node_expander_cell[:component] = "org.gxg.gui.block.table.cell"
-                node_expander_cell[:settings] = {}
+                node_expander_cell = new_component(:"org.gxg.gui.block.table.cell")
                 node_expander_cell[:options] = {:style => {:float => "left", :width => "32px", :'vertical-align' => 'middle'}}
-                node_expander_cell[:script] = ""
-                node_expander_cell[:content] = [(expander)]
+                node_expander_cell[:content] << expander
                 #
-                icon = ::GxG::Database::DetachedHash.new
+                icon = new_component(:"org.gxg.gui.block.table.cell")
                 icon.title = "icon #{@uuid.to_s}"
-                icon[:component] = "org.gxg.gui.image"
-                icon[:settings] = {}
                 icon[:options] = {:src=>@appearance[:icon], :style => {:clear => "both", :width=>"32px", :height=>"32px", :'vertical-align' => 'middle'}}
                 icon[:script] = "
                 on(:mouseup) do |event|
@@ -387,19 +419,14 @@ module GxG
                     end
                 end
                 "
-                icon[:content] = []
                 #
                 node_icon_cell = ::GxG::Database::DetachedHash.new
-                node_icon_cell[:component] = "org.gxg.gui.block.table.cell"
-                node_icon_cell[:settings] = {}
+                node_icon_cell = new_component(:"org.gxg.gui.block.table.cell")
                 node_icon_cell[:options] = {:style => {:float => "left", :width => "32px", :'vertical-align' => 'middle'}}
-                node_icon_cell[:script] = ""
-                node_icon_cell[:content] = [(icon)]
+                node_icon_cell[:content] << icon
                 #
-                the_title = ::GxG::Database::DetachedHash.new
+                the_title = new_component(:"org.gxg.gui.label")
                 the_title.title = "title #{@uuid.to_s}"
-                the_title[:component] = "org.gxg.gui.label"
-                the_title[:settings] = {}
                 the_title[:options] = {:content => @appearance[:label], :style => {:float => "left", :'font-size' => '16px', :'vertical-align' => 'middle', :'text-align' => 'left', :margin => "2px", :padding => "2px"}}
                 the_title[:script] = "
                 on(:mouseup) do |event|
@@ -412,19 +439,12 @@ module GxG
                     end
                 end
                 "
-                the_title[:content] = []
                 #
-                node_label_cell = ::GxG::Database::DetachedHash.new
-                node_label_cell[:component] = "org.gxg.gui.block.table.cell"
-                node_label_cell[:settings] = {}
+                node_label_cell = new_component(:"org.gxg.gui.block.table.cell")
                 node_label_cell[:options] = {:style => {:float => "left", :'vertical-align' => 'middle'}}
-                node_label_cell[:script] = ""
-                node_label_cell[:content] = [(the_title)]
+                node_label_cell[:content] << the_title
                 #
-                frame_row_one = ::GxG::Database::DetachedHash.new
-                frame_row_one[:component] = "org.gxg.gui.block.table.row"
-                frame_row_one[:settings] = {}
-                frame_row_one[:options] = {}
+                frame_row_one = new_component(:"org.gxg.gui.block.table.row")
                 frame_row_one[:script] = "
                 on(:mouseenter) do |event|
                     the_node = self.tree_node()
@@ -439,31 +459,22 @@ module GxG
                     end
                 end
                 "
-                frame_row_one[:content] = [(node_expander_cell), (node_icon_cell), (node_label_cell)]
+                frame_row_one[:content] << node_expander_cell
+                frame_row_one[:content] << node_icon_cell
+                frame_row_one[:content] << node_label_cell
                 #
-                sublist = ::GxG::Database::DetachedHash.new
+                sublist = new_component(:"org.gxg.gui.list" )
                 sublist.title = "content #{@uuid.to_s}"
-                sublist[:component] = "list"
-                sublist[:settings] = {}
                 sublist[:options] = {:width => "100%", :height => "100%", :style => {:"list-style" => "none"}}
-                sublist[:script] = ""
-                sublist[:content] = []
                 #
-                subnodes_frame_cell = ::GxG::Database::DetachedHash.new
-                subnodes_frame_cell[:component] = "org.gxg.gui.block.table.cell"
-                subnodes_frame_cell[:settings] = {}
-                subnodes_frame_cell[:options] = {}
-                subnodes_frame_cell[:script] = ""
-                subnodes_frame_cell[:content] = [(sublist)]
+                subnodes_frame_cell = new_component(:"org.gxg.gui.block.table.cell" )
+                subnodes_frame_cell[:content] << sublist
                 #
-                frame_row_two = ::GxG::Database::DetachedHash.new
-                frame_row_two[:component] = "org.gxg.gui.block.table.row"
-                frame_row_two[:settings] = {}
-                frame_row_two[:options] = {}
-                frame_row_two[:script] = ""
-                frame_row_two[:content] = [(subnodes_frame_cell)]
+                frame_row_two = new_component(:"org.gxg.gui.block.table.row" )
+                frame_row_two[:content] << subnodes_frame_cell
                 #
-                node_frame[:content] = [(frame_row_one),(frame_row_two)]
+                node_frame[:content] << frame_row_one
+                node_frame[:content] << frame_row_two
                 #
                 @content = nil
                 page.build_components(self, [(node_frame)])
@@ -506,7 +517,7 @@ module GxG
                 @content.show(transition_parameters)
                 self.set_state(:expanded, true)
                 if @expander
-                    @expander.set_attribute(:src,GxG::DISPLAY_DETAILS[:object].theme_widget("expand.svg"))
+                    @expander.set_attribute(:src, page.theme_widget("expand.svg"))
                 end
                 the_tree = self.tree()
                 if the_tree
@@ -518,7 +529,7 @@ module GxG
                 @content.hide(transition_parameters)
                 self.set_state(:expanded, false)
                 if @expander
-                    @expander.set_attribute(:src,GxG::DISPLAY_DETAILS[:object].theme_widget("collapse.svg"))
+                    @expander.set_attribute(:src, page.theme_widget("collapse.svg"))
                 end
                 the_tree = self.tree()
                 if the_tree
@@ -1045,7 +1056,7 @@ module GxG
                         end
                     end
                     #
-                    def update_appearance()
+                    def update_appearance(data=nil)
                         the_window = self.find_parent_type(::GxG::Gui::DialogBox)
                         if the_window
                             dialog_type = (the_window.settings[:type] || :folder)
