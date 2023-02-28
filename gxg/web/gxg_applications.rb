@@ -440,6 +440,7 @@ module GxG
         #
         def menu_item_select(data=nil)
             # override this in your object script.
+            # data will contain the entire menu object settings.
         end
         #
         def run(data={})

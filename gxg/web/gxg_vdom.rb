@@ -519,6 +519,14 @@ module GxG
               def toggle_state(the_state)
                   self.set_state(the_state,(! self.get_state(the_state)))
               end
+              #
+              def set_application(the_application=nil)
+                  @application = the_application
+              end
+              #
+              def application()
+                  @application
+              end
               # Determine if the state is active
               #
               # @param [String] state The state name

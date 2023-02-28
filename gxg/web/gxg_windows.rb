@@ -479,34 +479,34 @@ module GxG
                 @menu_reference
             end
             #
-            def menu()
-                @menu_bar
+            def menubar()
+                @menu_area
             end
             #
-            def set_menu(the_menu_source=nil)
-                if the_menu_source.is_any?(::Hash, ::GxG::Database::DetachedHash)
-                    if @menu_area
-                        page.build_components(@menu_area, [(the_menu_source)])
-                        #
-                        @menu_margin = (`#{@menu_area.element}.getBoundingClientRect().bottom - #{@menu_area.element}.getBoundingClientRect().top`.to_i)
-                        #
-                        @menu_bar = self.find_child(@menu_reference,true)
-                        #
-                        if @menu_bar
-                            self.commit_settings
-                            true
-                        else
-                            log_warn("Unable to properly initialize window menu #{@menu_reference.inspect} .")
-                            false
-                        end
-                    else
-                        false
-                    end
-                else
-                    false
-                end
-            end
-            alias :menu= :set_menu
+            # def set_menu(the_menu_source=nil)
+            #     if the_menu_source.is_any?(::Hash, ::GxG::Database::DetachedHash)
+            #         if @menu_area
+            #             page.build_components(@menu_area, [(the_menu_source)])
+            #             #
+            #             @menu_margin = (`#{@menu_area.element}.getBoundingClientRect().bottom - #{@menu_area.element}.getBoundingClientRect().top`.to_i)
+            #             #
+            #             @menu_bar = self.find_child(@menu_reference,true)
+            #             #
+            #             if @menu_bar
+            #                 self.commit_settings
+            #                 true
+            #             else
+            #                 log_warn("Unable to properly initialize window menu #{@menu_reference.inspect} .")
+            #                 false
+            #             end
+            #         else
+            #             false
+            #         end
+            #     else
+            #         false
+            #     end
+            # end
+            # alias :menu= :set_menu
             #
             alias :original_add_child :add_child
             def add_child(object_record=nil)
@@ -1223,7 +1223,7 @@ module GxG
                 build_list << resizing_areas
                 #
                 @content = nil
-                page.build_components(self,build_list)
+                page.build_components(self,build_list, {:application => @application})
                 # self.build_interior_components(build_list)
                 #
                 the_object = page.find_object_by(interior_component_uuid)

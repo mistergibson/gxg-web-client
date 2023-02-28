@@ -1416,6 +1416,80 @@ module GxG
                 super()
                 @domtype = :li
             end
+            #
+            def initialize(the_parent, options, other_data={})
+                @label = nil
+                super(the_parent, options, other_data)
+                self
+            end
+            #
+            def cascade
+                #
+                label = new_component(:"org.gxg.gui.link.anchor")
+                label.title = "label #{@uuid.to_s}"
+                # label[:options] = {:href => "#0", :content => (@settings[:label] || "Untitled").to_s}
+                label[:options] = {:content => (@settings[:label] || "Untitled").to_s}
+                label[:script] = "
+                on(:mouseup) do |event|
+                    if @parent.enabled?
+                        @parent.selecct()
+                    end
+                end
+                "
+                #
+                page.build_components(self, [(label)], {:application => @application})
+                the_object = page.find_object_by("label #{@uuid.to_s}")
+                if the_object
+                    @label = the_object
+                end
+            end
+            #
+            def label()
+                @label
+            end
+            #
+            def set_label_text(the_text=nil)
+                if @label
+                    @label.set_text(the_text.to_s)
+                    @settings[:label] = the_text.to_s
+                end
+            end
+            #
+            def enabled?()
+                if @label
+                    if @label.state_active?(:"menu-item-disabled")
+                        false
+                    else
+                        true
+                    end
+                else
+                    false
+                end
+            end
+            #
+            def enable()
+                if @label
+                    @label.set_state(:"menu-item-disabled",false)
+                end
+            end
+            #
+            def disable()
+                if @label
+                    @label.set_state(:"menu-item-disabled",true)
+                end
+            end
+            #
+            def set_data(data=nil)
+                @settings[:data] = data
+            end
+            #
+            def select(data=nil)
+                application = @parent.application()
+                if application
+                    application.menu_item_select(@settings)
+                end
+            end
+            #
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.dropdown.menu.item", ::GxG::Gui::DropdownMenuItem)
         #
@@ -1507,6 +1581,7 @@ module GxG
                 unless @options.keys.include?(:"data-dropdown-menu")
                     @options[:"data-dropdown-menu"] = nil
                 end
+                #
             end
             #
             def add_menu_item(label=nil, data=nil)
@@ -1516,20 +1591,13 @@ module GxG
                 the_item[:options] = {}
                 the_item[:script] = ""
                 the_item[:content] = []
-                page.build_components(self, [(the_item)])
+                page.build_components(self, [(the_item)], {:application => @application})
                 true
             end
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.dropdown.menu", ::GxG::Gui::DropdownMenu)
         #
         class MenuBar < ::GxG::Gui::DropdownMenu
-            def set_application(the_application=nil)
-                @application = the_application
-            end
-            #
-            def application()
-                @application
-            end
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.menu.bar", ::GxG::Gui::MenuBar)
         #
@@ -1545,17 +1613,10 @@ module GxG
             def add_menu_item(label=nil, data=nil)
                 the_item = new_component(:"org.gxg.gui.menu.item")
                 the_item[:settings] = {:label => label, :data => data}
-                page.build_components(self, [(the_item)])
+                page.build_components(self, [(the_item)], {:application => @application})
                 true
             end
             #
-            def set_application(the_application=nil)
-                @application = the_application
-            end
-            #
-            def application()
-                @application
-            end
         end
         ::GxG::Gui::register_component_class(:"org.gxg.gui.menu", ::GxG::Gui::Menu)
         #
@@ -1565,9 +1626,9 @@ module GxG
                 @domtype = :li
             end
             #
-            def initialize(the_parent, options)
+            def initialize(the_parent, options, other_data={})
                 @label = nil
-                super(the_parent, options)
+                super(the_parent, options, other_data)
                 self
             end
             #
@@ -1579,21 +1640,51 @@ module GxG
                 label[:options] = {:content => (@settings[:label] || "Untitled").to_s}
                 label[:script] = "
                 on(:mouseup) do |event|
-                    @parent.selecct()
+                    if @parent.enabled?
+                        @parent.selecct()
+                    end
                 end
                 "
                 #
-                page.build_components(self, [(label)])
+                page.build_components(self, [(label)], {:application => @application})
                 the_object = page.find_object_by("label #{@uuid.to_s}")
                 if the_object
                     @label = the_object
                 end
             end
             #
-            def set_label(the_text=nil)
+            def label()
+                @label
+            end
+            #
+            def set_label_text(the_text=nil)
                 if @label
                     @label.set_text(the_text.to_s)
                     @settings[:label] = the_text.to_s
+                end
+            end
+            #
+            def enabled?()
+                if @label
+                    if @label.state_active?(:"menu-item-disabled")
+                        false
+                    else
+                        true
+                    end
+                else
+                    false
+                end
+            end
+            #
+            def enable()
+                if @label
+                    @label.set_state(:"menu-item-disabled",false)
+                end
+            end
+            #
+            def disable()
+                if @label
+                    @label.set_state(:"menu-item-disabled",true)
                 end
             end
             #
@@ -1604,7 +1695,7 @@ module GxG
             def select(data=nil)
                 application = @parent.application()
                 if application
-                    application.menu_item_select(@settings[:data])
+                    application.menu_item_select(@settings)
                 end
             end
             #
