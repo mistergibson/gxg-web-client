@@ -57,10 +57,11 @@ module GxG
                 # Expects: String or Hash
                 if the_data.is_any?(::Hash, ::GxG::Database::DetachedHash)
                     if the_data.is_a?(::Hash)
-                        the_data = JSON.generate(the_data).encode64
+                        # ??? Where to encrypt : encrypt(connector().secret)
+                        the_data = JSON.generate(the_data).to_s.encode64
                     else
                         # Discouraged: no context of an operation this way. Not good. (deprecate?)
-                        the_data = JSON.generate(the_data.export).encode64
+                        the_data = JSON.generate(the_data.export).to_s.encode64
                     end
                 end
                 thesocket = @socket
@@ -99,6 +100,7 @@ module GxG
                     the_url = "ws://#{the_location}"
                 end
                 begin
+                    # Unencrypted Preamble
                     greeting = {:attach_display => true}.to_json.encode64
                     the_socket = `new WebSocket(the_url)`
                     %x{
@@ -1031,6 +1033,10 @@ module GxG
             #
             def display_path()
                 @display_path
+            end
+            #
+            def secret()
+                @csrf
             end
             #
             def initialize()

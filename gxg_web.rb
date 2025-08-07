@@ -89,6 +89,10 @@ class Object
         ::GxG::CONNECTION
     end
     #
+    def socket()
+        ::GxG::DISPLAY_DETAILS[:socket] 
+    end
+    #
     def sockets()
         ::GxG::SOCKET_MONITOR
     end

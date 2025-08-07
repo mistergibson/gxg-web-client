@@ -1,8 +1,98 @@
 # Events Section:
 module GxG
+  GXG_FEDERATION = {:title => "Untitled", :uuid => nil, :available => {}, :connections => {}}
+  # ::GxG::SOCKET_MONITOR
+  module Messages
+    class ChannelManager
+      #
+      def update_channels
+        result = false
+        channels = []
+        GXG_FEDERATION[:connections].values.each do |the_channel|
+          channels << the_channel
+        end
+        channels.each do |the_channel|
+          the_message = the_channel.read()
+          while the_message do
+            self.dispatch_message(the_message)
+            the_message = the_channel.read()
+          end
+        end
+        if channels.size > 0
+          result = true
+        end
+        result
+      end
+      #
+      def dispatch_message(the_message=nil)
+        result = false
+        if the_message.is_a?(::GxG::Events::Message)
+          destination = the_message[:to]
+          # uuid
+          if ::GxG::valud_uuid?(destination.to_s)
+            channel = self.fetch_channel(destination.to_s.to_sym)
+            if channel
+              channel.write(the_message)
+              result = true
+            end
+          end
+          # email address -- TODO
+        end
+        result
+      end
+      #
+      def fetch_channel(the_uuid)
+        GXG_FEDERATION[:connections][(the_uuid)]
+      end
+      #
+      def create_channel(the_uuid)
+        GXG_FEDERATION[:connections][(the_uuid)] = ::GxG::Messages::Channel.new(the_uuid)
+      end
+      #
+      def destroy_channel(the_uuid)
+        channel = self.fetch_channel(the_uuid)
+        if channel
+          channel.outbox_size.times do |indexer|
+            the_message = channel.read()
+            if the_message
+              self.dispatch_message(the_message)
+            end
+          end
+        end
+        GXG_FEDERATION[:connections].delete(the_uuid)
+      end
+      #
+      def next_message(the_uuid)
+        result = nil
+        channel = self.fetch_channel(the_uuid)
+        if channel
+          result = channel.next_message()
+        end
+        result
+      end
+      #
+      def send_message(the_uuid, the_message)
+        channel = self.fetch_channel(the_uuid)
+        if channel
+          channel.send_message(the_message)
+        end
+      end
+      #
+      def initialize
+        self
+      end
+      #
+    end
+  end
+  # ###
   module Events
     #
     class Message
+      def self.import(the_data=nil)
+        the_message = new_message {}
+        the_message.import(the_data)
+        the_message
+      end
       #
       def initialize(*args)
         # MUST provide a hash with at least :sender message field set
@@ -93,6 +183,33 @@ module GxG
       def set_at_path(*args)
         @data.set_at_path(*args)
       end
+      #
+      def import(the_data=nil)
+        # Requires gxg_export+JSON String or gxg_export Hash
+        unless the_data.is_any?(::String, ::Hash)
+          raise Exception.new("You MUST supply a JSON string or a Hash, you supplied: #{the_data.class.inspect}")
+        end
+        result = false
+        if the_data.is_a?(::String)
+          the_data = JSON.parse(the_data, {:symbolize_names => true})
+        end
+        if the_data.is(::Hash)
+          @data.merge(::Hash::gxg_import(the_data))
+          result = true
+        end
+        result
+      end
+      #
+      def export()
+        @data.gxg_export.to_json.to_s
+      end
+      def to_s()
+        self.export.to_s
+      end
+      def to_json
+        self.to_s
+      end
+      #
     end
     #
     class LoggerDB
@@ -565,3 +682,37 @@ module GxG
   end
 end
 #
+
+module GxG
+  CHANNELS = ::GxG::Messages::ChannelManager.new
+end
+class Object
+  #
+  def send_message(the_message)
+    unless @uuid
+      @uuid = ::GxG::uuid_generate.to_s.to_sym
+      ::GxG::CHANNELS.create_channel(@uuid)
+    end
+    ::GxG::CHANNELS.send_message(@uuid, the_message)
+    true
+  end
+  #
+  def next_message()
+    unless @uuid
+      @uuid = ::GxG::uuid_generate.to_s.to_sym
+      ::GxG::CHANNELS.create_channel(@uuid)
+    end
+    ::GxG::CHANNELS.next_message(@uuid)
+  end
+  #
+  def post(the_message)
+    unless @uuid
+      @uuid = ::GxG::uuid_generate.to_s.to_sym
+      ::GxG::CHANNELS.create_channel(@uuid)
+    end
+    channel = ::GxG::CHANNELS.fetch_channel(@uuid)
+    if channel 
+      channel.write(the_message)
+    end
+    true
+  end
