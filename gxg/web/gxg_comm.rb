@@ -1152,6 +1152,21 @@ module GxG
                                         GxG::CONNECTION.push(the_message)
                                     end
                                 end
+                                # Normally encrypts socket traffic
+                                # Send format: channel.socket.send({ :payload => the_message.export.to_s.encrypt(channel.secret).encode64 }.to_json.encode64, :text)
+                                ::GxG::SOCKET_MONITOR.on(:payload) do |the_data|
+                                    the_message = ::GxG::Events::Message::import(the_data.to_s.decode64.decrypt(@csrf))
+                                    if the_message.is_a?(::GxG::Events::Message)
+                                        the_channel = ::GxG::CHANNELS.fetch_channel(the_message[:to])
+                                        unless the_channel
+                                            ::GxG::CHANNELS.create_channel(the_message[:to])
+                                            the_channel = ::GxG::CHANNELS.fetch_channel(the_message[:to])
+                                        end
+                                        if the_channel
+                                            the_channel.write(the_message)
+                                        end
+                                    end
+                                end
                                 ::GxG::DISPATCHER.add_periodic_timer({:interval => 0.333}) do
                                     ::GxG::SOCKET_MONITOR.follow_up
                                 end

@@ -33,8 +33,11 @@ module GxG
             channel = self.fetch_channel(destination.to_s.to_sym)
             if channel
               channel.write(the_message)
-              result = true
+            else
+              # Send format: channel.socket.send({ :payload => the_message.export.to_s.encrypt(channel.secret).encode64 }.to_json.encode64, :text)
+              socket.send({ :payload => the_message.export.to_s.encrypt(connector.secret).encode64 }.to_json.encode64, :text)
             end
+            result = true
           end
           # email address -- TODO
         end
@@ -100,7 +103,7 @@ module GxG
         unless args[0].is_a?(::Hash)
           raise ArgumentError, "you must pass a Hash to create the message"
         end
-        @data = {:sender => nil, :id => (::GxG.uuid_generate().to_s.to_sym), :subject => args[1], :body => nil, :on_success => nil, :on_fail => nil}.merge(args[0])
+        @data = {:sender => nil. :id => GxG::uuid_generate().to_s.to_sym, :subject => args[1], :body => nil, :on_success => nil, :on_fail => nil}.merge(args[0])
         unless @data[:sender]
           raise ArgumentError, "you must set the :sender key in the argument Hash"
         end
