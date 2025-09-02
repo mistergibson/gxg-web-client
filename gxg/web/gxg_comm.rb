@@ -1087,6 +1087,7 @@ module GxG
                 @csrf = nil
                 @the_connector = self
                 # Make introduction to host and aquire csrf token
+                ::GxG::CHANNELS.create_channel(@uuid)
                 the_introduction = new_message({:introduction => @uuid.to_s})
                 the_introduction[:sender] = @uuid.to_s
                 the_introduction[:to] = @host_prefix.to_s

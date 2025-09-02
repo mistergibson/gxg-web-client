@@ -15,11 +15,11 @@ class Object
   end
   #
   def new_message(*args)
-    #    if args[0].is_a?(Hash)
-    #      ::GxG::Events::Message.new({:sender => self, :subject => args[1], :body => nil}.merge(args[0]))
-    #    else
-    ::GxG::Events::Message.new({:sender => self, :subject => args[1], :body => args[0]})
-    #    end
+    unless @uuid
+      @uuid = ::GxG::uuid_generate.to_s.to_sym
+      ::GxG::CHANNELS.create_channel(@uuid)
+    end
+    ::GxG::Events::Message.new({:sender => @uuid, :subject => args[1], :body => args[0]})
   end
   # logging hooks
   def log_unknown(message = nil, progname = nil, &block)
@@ -127,6 +127,17 @@ class Object
     end
     result
   end
+  #
+  def defederate()
+    if @uuid
+      the_channel = ::GxG::CHANNELS.fetch_channel(@uuid)
+      if the_channel
+        ::GxG::CHANNELS.destroy_channel(@uuid)
+      end
+    end
+    true
+  end
+  #
 end
 #
 module GxG
