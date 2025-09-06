@@ -10,6 +10,10 @@ $object_space = {:registry => {}}
 class Object
   private
   #
+  def logged_in?()
+    GxG::DISPLAY_DETAILS[:logged_in]
+  end
+  #
   def bytes(*args)
     GxG::ByteArray::try_convert(args)
   end
@@ -17,7 +21,7 @@ class Object
   def new_message(*args)
     unless @uuid
       @uuid = ::GxG::uuid_generate.to_s.to_sym
-      ::GxG::CHANNELS.create_channel(@uuid)
+      ::GxG::CHANNELS.create_channel(@uuid,self)
     end
     ::GxG::Events::Message.new({:sender => @uuid, :subject => args[1], :body => args[0]})
   end

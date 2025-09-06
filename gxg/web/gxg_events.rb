@@ -3,6 +3,77 @@ module GxG
   GXG_FEDERATION = {:title => "Untitled", :uuid => nil, :available => {}, :connections => {}}
   # ::GxG::SOCKET_MONITOR
   module Messages
+    class Channel
+      #
+      def initialize(the_uuid=nil, the_object=nil)
+        @uuid = the_uuid
+        @inbox = []
+        @outbox = []
+        @socket = nil
+        @remote = nil
+        @channel_secret = nil
+        @object = the_object
+        self
+      end
+      #
+      def uuid()
+        @uuid
+      end
+      #
+      def object()
+        @object
+      end
+      #
+      def socket()
+        @socket
+      end
+      #
+      def socket=(the_socket=nil)
+        @socket = the_socket
+      end
+      #
+      def remote()
+        @remote
+      end
+      #
+      def remote=(the_remote=nil)
+        @remote = the_remote
+      end
+      #
+      def secret()
+        @channel_secret
+      end
+      #
+      def secret=(the_secret=nil)
+        @channel_secret = the_secret
+      end
+      #
+      def inbox_size()
+        @inbox.size
+      end
+      #
+      def next_message()
+        @inbox.unshift
+      end
+      #
+      def outbox_size()
+        @outbox.size
+      end
+      #
+      def send_message(the_message)
+        @outbox << the_message
+      end
+      #
+      def read()
+        @outbox.unshift
+      end
+      #
+      def write(the_message)
+        @inbox << the_message
+      end
+      #
+    end
+    #
     class ChannelManager
       #
       def update_channels
@@ -33,11 +104,17 @@ module GxG
             channel = self.fetch_channel(destination.to_s.to_sym)
             if channel
               channel.write(the_message)
+              result = true
             else
               # Send format: channel.socket.send({ :payload => the_message.export.to_s.encrypt(channel.secret).encode64 }.to_json.encode64, :text)
-              socket.send({ :payload => the_message.export.to_s.encrypt(connector.secret).encode64 }.to_json.encode64, :text)
+              if GxG::DISPLAY_DETAILS[:logged_in]
+                socket.send({ :payload => the_message.export.to_s.encrypt(connector.secret).encode64 }.to_json.encode64, :text)
+                result = true
+              else
+                log_warn("Message dropped --> login and resend")
+                result = false
+              end
             end
-            result = true
           end
           # email address -- TODO
         end
@@ -48,18 +125,25 @@ module GxG
         GXG_FEDERATION[:connections][(the_uuid)]
       end
       #
-      def create_channel(the_uuid)
-        GXG_FEDERATION[:connections][(the_uuid)] = ::GxG::Messages::Channel.new(the_uuid)
+      def create_channel(the_uuid=nil,the_object=nil)
+        GXG_FEDERATION[:connections][(the_uuid)] = ::GxG::Messages::Channel.new(the_uuid,the_object)
+        if GxG::DISPLAY_DETAILS[:logged_in]
+          socket.send({ :open_channel => the_uuid }.to_json.encode64, :text)
+        end
       end
       #
       def destroy_channel(the_uuid)
         channel = self.fetch_channel(the_uuid)
         if channel
+
           channel.outbox_size.times do |indexer|
             the_message = channel.read()
             if the_message
               self.dispatch_message(the_message)
             end
+          end
+          if GxG::DISPLAY_DETAILS[:logged_in]
+            socket.send({ :close_channel => the_uuid }.to_json.encode64, :text)
           end
         end
         GXG_FEDERATION[:connections].delete(the_uuid)
@@ -694,7 +778,7 @@ class Object
   def send_message(the_message)
     unless @uuid
       @uuid = ::GxG::uuid_generate.to_s.to_sym
-      ::GxG::CHANNELS.create_channel(@uuid)
+      ::GxG::CHANNELS.create_channel(@uuid,self)
     end
     ::GxG::CHANNELS.send_message(@uuid, the_message)
     true
@@ -703,7 +787,7 @@ class Object
   def next_message()
     unless @uuid
       @uuid = ::GxG::uuid_generate.to_s.to_sym
-      ::GxG::CHANNELS.create_channel(@uuid)
+      ::GxG::CHANNELS.create_channel(@uuid,self)
     end
     ::GxG::CHANNELS.next_message(@uuid)
   end
@@ -711,7 +795,7 @@ class Object
   def post(the_message)
     unless @uuid
       @uuid = ::GxG::uuid_generate.to_s.to_sym
-      ::GxG::CHANNELS.create_channel(@uuid)
+      ::GxG::CHANNELS.create_channel(@uuid,self)
     end
     channel = ::GxG::CHANNELS.fetch_channel(@uuid)
     if channel 
@@ -719,3 +803,8 @@ class Object
     end
     true
   end
+  #
+  def process_message(the_message=nil, options = {})
+    # override to use
+  end
+end

@@ -145,9 +145,6 @@ module GxG
     end
     # XHR Connector:
     module Networking
-        class Channel
-            #
-        end
         #
         class Connector
             #
@@ -973,6 +970,10 @@ module GxG
                             if the_response.is_a?(::Hash)
                                 if the_response[:status] == "credentialed"
                                     GxG::DISPLAY_DETAILS[:logged_in] = true
+                                    GXG_FEDERATION[:connections].keys.each do |the_uuid|
+                                        socket.send({ :open_channel => the_uuid.to_s }.to_json.encode64, :text)
+                                    end
+                                    #
                                 end
                             end
                             the_handler.call(the_response)
@@ -999,6 +1000,9 @@ module GxG
                         if response.is_a?(::Hash)
                             # FIXME: possible conflict with proper credential setting.
                             if response[:status] == "uncredentialed"
+                                GXG_FEDERATION[:connections].keys.each do |the_uuid|
+                                    socket.send({ :close_channel => the_uuid.to_s }.to_json.encode64, :text)
+                                end
                                 GxG::DISPLAY_DETAILS[:logged_in] = false
                                 if the_handler.respond_to?(:call)
                                     the_handler.call(response)
@@ -1087,7 +1091,6 @@ module GxG
                 @csrf = nil
                 @the_connector = self
                 # Make introduction to host and aquire csrf token
-                ::GxG::CHANNELS.create_channel(@uuid)
                 the_introduction = new_message({:introduction => @uuid.to_s})
                 the_introduction[:sender] = @uuid.to_s
                 the_introduction[:to] = @host_prefix.to_s
@@ -1150,6 +1153,10 @@ module GxG
                                         the_message[:sender] = @uuid
                                         the_message[:to] = @remote_uuid
                                         # Review : add fail/succeed code blocks??
+                                        # if succeed do this: ::GxG::CHANNELS.create_channel(@uuid)
+                                        the_message.on(:success) do |response|
+                                            ::GxG::CHANNELS.create_channel(@uuid)
+                                        end
                                         GxG::CONNECTION.push(the_message)
                                     end
                                 end

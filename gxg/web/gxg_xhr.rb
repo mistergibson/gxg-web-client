@@ -3,9 +3,6 @@
 #
 module GxG
     module Networking
-        class Channel
-            #
-        end
         #
         class Connector
             #
