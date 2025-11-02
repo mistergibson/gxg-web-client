@@ -1,4 +1,4 @@
-
+# backtick_javascript: true
 # ----------------------------------------------------------------------------------------------------
 # Provided Module Space for libraries to declare their :global within.
 module Libraries

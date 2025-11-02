@@ -1,4 +1,5 @@
 # GxG for Opal
+# backtick_javascript: true
 # Place Holders:
 module GxG
   LOG = nil

@@ -1,3 +1,4 @@
+# backtick_javascript: true
 module GxG
     module Gui
         # Viewport

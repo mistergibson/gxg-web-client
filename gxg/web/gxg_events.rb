@@ -1,4 +1,5 @@
 # Events Section:
+# backtick_javascript: true
 module GxG
   GXG_FEDERATION = {:title => "Untitled", :uuid => nil, :available => {}, :connections => {}}
   # ::GxG::SOCKET_MONITOR
@@ -187,7 +188,7 @@ module GxG
         unless args[0].is_a?(::Hash)
           raise ArgumentError, "you must pass a Hash to create the message"
         end
-        @data = {:sender => nil. :id => GxG::uuid_generate().to_s.to_sym, :subject => args[1], :body => nil, :on_success => nil, :on_fail => nil}.merge(args[0])
+        @data = {:sender => nil, :id => GxG::uuid_generate().to_s.to_sym, :subject => args[1].to_s, :body => nil, :on_success => nil, :on_fail => nil}.merge(args[0])
         unless @data[:sender]
           raise ArgumentError, "you must set the :sender key in the argument Hash"
         end

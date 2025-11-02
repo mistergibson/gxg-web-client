@@ -1,3 +1,5 @@
+# backtick_javascript: true
+
 module GxG
     module Gui
         module Vdom
