@@ -1,3 +1,4 @@
+# backtick_javascript: true
 # Alteration to Opal's Buffer::Array
 class Buffer
   class Array
@@ -645,23 +646,20 @@ class Hash
           end
           last_container = container
         end
-        if selector.is_a?(Symbol)
-          safe_key = (":" + selector.to_s)
-        else
-          safe_key = selector.to_s
-        end
+        safe_key = selector.to_s
+        # xxx
+        # if selector.is_a?(Symbol)
+        #   safe_key = (":" + selector.to_s)
+        # else
+        #   safe_key = selector.to_s
+        # end
+        # xxx
         safe_key = safe_key.gsub("/","%2f")
         path_stack.unshift(safe_key)
         # compare the_value
         found = false
-        if the_value.is_a?(::GxG::Database::Field)
-          if (the_value.content == the_object)
-            found = true
-          end
-        else
-          if (the_value == the_object)
-            found = true
-          end
+        if (the_value == the_object)
+          found = true
         end
         if found
           search_results << ("/" + path_stack.reverse.join("/"))
@@ -695,9 +693,7 @@ class Hash
           else
             element = path_element
             element = element.gsub("%2f","/")
-            if element[0] == ":"
-              element = element[(1..-1)].to_sym
-            end
+            element = element.to_sym
           end
         end
         if element
@@ -729,9 +725,7 @@ class Hash
           else
             selector = raw_selector
             selector = selector.gsub("%2f","/")
-            if selector[0] == ":"
-              selector = selector[(1..-1)].to_sym
-            end
+            selector = selector.to_sym
           end
         end
         if selector
@@ -1036,23 +1030,20 @@ class Array
           end
           last_container = container
         end
-        if selector.is_a?(Symbol)
-          safe_key = (":" + selector.to_s)
-        else
-          safe_key = selector.to_s
-        end
+        safe_key = selector.to_s
+        # xxx
+        # if selector.is_a?(Symbol)
+        #   safe_key = (":" + selector.to_s)
+        # else
+        #   safe_key = selector.to_s
+        # end
+        # xxx
         safe_key = safe_key.gsub("/","%2f")
         path_stack.unshift(safe_key)
         # compare the_value
         found = false
-        if the_value.is_a?(::GxG::Database::Field)
-          if (the_value.content == the_object)
-            found = true
-          end
-        else
-          if (the_value == the_object)
-            found = true
-          end
+        if (the_value == the_object)
+          found = true
         end
         if found
           search_results << ("/" + path_stack.reverse.join("/"))
@@ -1090,9 +1081,7 @@ class Array
           else
             element = path_element
             element = element.gsub("%2f","/")
-            if element[0] == ":"
-              element = element[(1..-1)].to_sym
-            end
+            element = element.to_sym
           end
         end
         if element
@@ -1124,9 +1113,7 @@ class Array
           else
             selector = raw_selector
             selector = selector.gsub("%2f","/")
-            if selector[0] == ":"
-              selector = selector[(1..-1)].to_sym
-            end
+            selector = selector.to_sym
           end
         end
         if selector

@@ -1927,15 +1927,22 @@ module GxG
               # @param [String] parent The parent Ruby element
               # @param [Hash] options Any options for the creation process
               def initialize(parent, options={}, other_data={})
+                # ??? uuid is stored in @settings[:template]
                 if options.is_a?(GxG::Database::DetachedHash)
-                    @uuid = options.uuid.to_s.to_sym
+                    # ??? @uuid = options.uuid.to_s.to_sym
+                    @uuid = ::GxG::uuid_generate().to_s.to_sym
                     if options[:title].to_s.size > 0
-                        @title = options[:title].to_s
+                        if options[:title].to_s.include("Untitled ")
+                            @title = "Untitled Component #{@uuid.to_s}"
+                        else
+                            @title = options[:title].to_s
+                        end
                     else
                         @title = options.title.to_s
                     end
                 else
-                    @uuid = (options[:uuid] || ::GxG::uuid_generate()).to_s.to_sym
+                    # ??? @uuid = (options[:uuid] || ::GxG::uuid_generate()).to_s.to_sym
+                    @uuid = ::GxG::uuid_generate().to_s.to_sym
                     @title = (options[:title] || "Untitled Component #{@uuid.to_s}").to_s
                 end
                 @component = (options[:component] || :unknown).to_s.downcase.to_sym
@@ -1949,6 +1956,11 @@ module GxG
                     else
                         @settings = {}
                     end
+                end
+                if options.respond_to?(:uuid)
+                    @settings[:template] = options.uuid.to_s.to_sym
+                else
+                    @settings[:template] = nil
                 end
                 #
                 if other_data[:application]

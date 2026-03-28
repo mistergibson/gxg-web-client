@@ -1,4 +1,4 @@
-#
+# backtick_javascript: true
 #require 'gxg_uri'
 #
 module GxG

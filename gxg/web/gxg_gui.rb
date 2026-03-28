@@ -132,7 +132,7 @@ module GxG
             end
             #
             def update_appearance(data=nil)
-                # TODO ??
+                # TODO ???
             end
             # Selection / Processing:
             def set_processor(the_type=nil, &block)

@@ -1,7 +1,7 @@
 # Events Section:
 # backtick_javascript: true
 module GxG
-  GXG_FEDERATION = {:title => "Untitled", :uuid => nil, :available => {}, :connections => {}}
+  GXG_FEDERATION = {:title => "Untitled", :uuid => nil, :access_url => nil, :available => {}, :connections => {}}
   # ::GxG::SOCKET_MONITOR
   module Messages
     class Channel
