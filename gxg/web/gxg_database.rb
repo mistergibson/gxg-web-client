@@ -1168,6 +1168,62 @@ module GxG
           result
         end
         #
+        def merge!(input_object=nil, options={})
+          result = self
+          if input_object.is_any?(::Hash, ::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+            #
+            if @format
+              # merge only keys common to both
+              input_object.keys.each do |import_key|
+                if result.keys.include?(import_key)
+                  result[(import_key)] = input_object[(import_key)]
+                  if input_object.is_any?(::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+                    result.set_property_version(import_key, input_object.property_version(import_key))
+                  end
+                end
+              end
+            else
+              input_object.keys.each do |import_key|
+                result[(import_key)] = input_object[(import_key)]
+                if input_object.is_any?(::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+                  result.set_property_version(import_key, input_object.property_version(import_key))
+                end
+              end
+            end
+            #
+          end
+          result
+        end
+        #
+        def merge(input_object=nil, options={})
+          result = self
+          if input_object.is_any?(::Hash, ::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+            result = ::GxG::Database::DetachedHash::iterative_detached_persist(self.unpersist)
+            #
+            if @format
+              # merge only keys common to both
+              input_object.keys.each do |import_key|
+                if result.keys.include?(import_key)
+                  result[(import_key)] = input_object[(import_key)]
+                  if input_object.is_any?(::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+                    result.set_property_version(import_key, input_object.property_version(import_key))
+                  end
+                end
+              end
+              result.format = @format
+            else
+              input_object.keys.each do |import_key|
+                result[(import_key)] = input_object[(import_key)]
+                if input_object.is_any?(::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+                  result.set_property_version(import_key, input_object.property_version(import_key))
+                end
+              end
+            end
+            #
+          end
+          result
+        end
+        #
       end
         #
       class DetachedArray
