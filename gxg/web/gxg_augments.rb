@@ -678,13 +678,25 @@ class Hash
     search_results
   end
   #
+  def object_map()
+    result = {}
+    #
+    self.search do |the_value, the_selector, the_container|
+      self.paths_to(the_value).each do |the_subpath|
+        result[(the_subpath.to_s.to_sym)] = the_value
+      end
+    end
+    #
+    result
+  end
+  #
   def get_at_path(the_path="/")
     result = nil
     if the_path == "/"
       result = self
     else
       object_stack = [(self)]
-      path_stack = the_path.split("/")
+      path_stack = the_path.to_s.split("/")
       path_stack.to_enum.each do |path_element|
         element = nil
         if path_element.size > 0
@@ -715,9 +727,9 @@ class Hash
   def set_at_path(the_path="/",the_value=nil)
     result = nil
     if the_path != "/"
-      container = self.get_at_path(::File::dirname(the_path))
+      container = self.get_at_path(::File::dirname(the_path.to_s))
       if container
-        raw_selector = ::File::basename(the_path)
+        raw_selector = ::File::basename(the_path.to_s)
         selector = nil
         if raw_selector.size > 0
           if (raw_selector =~ /^(?:[0-9])*[0-9](?:[0-9])*$/) == 0
@@ -746,7 +758,7 @@ class Hash
     self.process! do |value, selector, container|
       if container.is_a?(::Hash)
         unless selector.is_a?(::Symbol)
-          container[(selector.to_sym)] = container.delete(selector)
+          container[(selector.to_s.to_sym)] = container.delete(selector)
         end
       end
       nil
@@ -1062,17 +1074,25 @@ class Array
     search_results
   end
   #
-  def get_at_path(the_path="/")
-    # /^(?:[0-9])*[0-9](?:[0-9])*$/ = nil if an alpha present there, else 0 only numeric
-    # Attribution : http://stackoverflow.com/questions/1240674/regex-match-a-string-containing-numbers-and-letters-but-not-a-string-of-just-nu
+  def object_map()
+    result = {}
     #
-    # if ":" detected do: (str.gsub("%2f","/").to_sym) as key else (str.gsub("%2f","/"))
+    self.search do |the_value, the_selector, the_container|
+      self.paths_to(the_value).each do |the_subpath|
+        result[(the_subpath.to_s.to_sym)] = the_value
+      end
+    end
+    #
+    result
+  end
+  #
+  def get_at_path(the_path="/")
     result = nil
     if the_path == "/"
       result = self
     else
       object_stack = [(self)]
-      path_stack = the_path.split("/")
+      path_stack = the_path.to_s.split("/")
       path_stack.to_enum.each do |path_element|
         element = nil
         if path_element.size > 0
@@ -1103,9 +1123,9 @@ class Array
   def set_at_path(the_path="/",the_value=nil)
     result = nil
     if the_path != "/"
-      container = self.get_at_path(::File::dirname(the_path))
+      container = self.get_at_path(::File::dirname(the_path.to_s))
       if container
-        raw_selector = ::File::basename(the_path)
+        raw_selector = ::File::basename(the_path.to_s)
         selector = nil
         if raw_selector.size > 0
           if (raw_selector =~ /^(?:[0-9])*[0-9](?:[0-9])*$/) == 0
