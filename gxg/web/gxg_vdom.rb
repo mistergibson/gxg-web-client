@@ -440,7 +440,9 @@ module GxG
                     while queue.size > 0 do
                         entry = queue.unshift()
                         if entry
-                            path_array << entry.title.to_s
+                            unless page() == entry
+                                path_array << entry.title.to_s
+                            end
                             if entry.parent()
                                 queue << entry.parent()
                             end
