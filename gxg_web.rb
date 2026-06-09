@@ -1,3 +1,4 @@
+# backtick_javascript: true
 # Require Core Library:
 # require 'opal/full'
 require 'opal'

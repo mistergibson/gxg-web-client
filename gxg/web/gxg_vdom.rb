@@ -361,6 +361,10 @@ module GxG
                     if element_class.is_a?(::Class)
                         new_child = element_class.new(self,options,other_data)
                         @children[(new_child.title.to_s.to_sym)] = new_child
+                        # Set :template_uuid if present
+                        if other_data[:template_uuid]
+                            new_child.settings()[:template_uuid] = other_data[:template_uuid]
+                        end
                         # Register Object with Page
                         ::GxG::DISPLAY_DETAILS[:object].register_object(new_child.title, new_child)
                     else
@@ -410,6 +414,11 @@ module GxG
                 page.unregister_object(the_title)
                 @children.delete(the_title.to_s.to_sym)
               end
+              #
+              # Content of the entity (similar to how DetachedHash works)
+              def entity_content()
+                @children.values
+              end
               # Remove a DOM element.
               def destroy
                 self.every_child do |the_child|
@@ -421,27 +430,91 @@ module GxG
                 `#{parent.element}.removeChild(#{element})`
                 true
               end
-          
-              # Getter for children.
-              def method_missing(method_name, *args, &block)
-                if @children.has_key?(method_name)
-                  @children[method_name]
-                else
-                  super
+              # ### Path supports:
+              def vdom_path()
+                result = "/"
+                #
+                if @parent
+                    path_array = []
+                    queue = [(self)]
+                    while queue.size > 0 do
+                        entry = queue.unshift()
+                        if entry
+                            path_array << entry.title.to_s
+                            if entry.parent()
+                                queue << entry.parent()
+                            end
+                        end
+                    end
+                    if path_array.size > 0
+                        result = ("/" + path_array.reverse.join("/"))
+                    end
                 end
+                #
+                result
               end
-              # ### Element identity
-              # Get the id of the elements corresponding DOM element
               #
-              # @return [String] The id
-              def dom_id
-                # "_#{self.object_id}"
+              def vdom_object(the_path=nil)
+                # access the object tree with a path
+                result = nil
+                #
+                if the_path
+                    the_path = the_path.to_s
+                    #
+                    if the_path[(0..1)] == "./" || the_path[(0..1)] == ".."
+                        the_path = File.expand_path(the_path, self.vdom_path())
+                    end
+                    #
+                    path_array = the_path.split("/")
+                    object_array = []
+                    path_array.each_with_index do |entry, indexer|
+                        if entry == ""
+                            if indexer == 0
+                                object_array[(indexer)] = page()
+                            else
+                                break
+                            end
+                        else
+                            if indexer > 0
+                                if object_array[(indexer - 1)]
+                                    object_array[(indexer - 1)].children.each_pair do |object_name, the_object|
+                                        if object_name == path_array[(indexer)]
+                                            object_array[(indexer)] = the_object
+                                            break
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if object_array.last
+                        result = object_array.last
+                    end
+                end
+                #
+                result
+            end
+            # ###
+            # Getter for children.
+            def method_missing(method_name, *args, &block)
+                if @children.has_key?(method_name)
+                    @children[method_name]
+                else
+                    super
+                end
+            end
+            # ### Element identity
+            # Get the id of the elements corresponding DOM element
+            #
+            # @return [String] The id
+            def dom_id
+            # "_#{self.object_id}"
                 self.uuid.to_s
-              end
-              #
-              def title()
-                  @title
-              end
+            end
+            #
+            def title()
+                @title
+            end
               #
             #   def title=(the_title=nil)
             #       if the_title.is_any?(::String, ::Symbol)
@@ -1914,7 +1987,7 @@ module GxG
               include GxG::Gui::Vdom::ApplicationSupport
               include GxG::Gui::Vdom::ThemeSupport
 
-              attr_reader :uuid, :title, :component, :parent, :children, :element, :domtype, :settings
+            attr_reader :uuid, :title, :component, :parent, :children, :element, :domtype, :settings
             def set_settings(the_settings=nil)
                 @settings = the_settings
             end
@@ -1927,7 +2000,6 @@ module GxG
               # @param [String] parent The parent Ruby element
               # @param [Hash] options Any options for the creation process
               def initialize(parent, options={}, other_data={})
-                # ??? uuid is stored in @settings[:template]
                 if options.is_a?(GxG::Database::DetachedHash)
                     # ??? @uuid = options.uuid.to_s.to_sym
                     @uuid = ::GxG::uuid_generate().to_s.to_sym
@@ -1948,7 +2020,7 @@ module GxG
                 @component = (options[:component] || :unknown).to_s.downcase.to_sym
                 @parent   = parent
                 #
-                if options[:settings].is_a?(GxG::Database::DetachedHash)
+                if options[:settings].is_a?(GxG::Database::DetachedHash, GxG::Database::PersistedHash)
                     @settings = options[:settings].unpersist
                 else
                     if options[:settings].is_a?(::Hash)
@@ -1957,11 +2029,11 @@ module GxG
                         @settings = {}
                     end
                 end
-                if options.respond_to?(:uuid)
-                    @settings[:template] = options.uuid.to_s.to_sym
-                else
-                    @settings[:template] = nil
-                end
+                # if options.respond_to?(:uuid)
+                #     @settings[:template] = options.uuid.to_s.to_sym
+                # else
+                #     @settings[:template] = nil
+                # end
                 #
                 if other_data[:application]
                     @application = other_data[:application]
@@ -2335,7 +2407,11 @@ module GxG
                             record = build_queue.shift
                             if record
                                 record[:content].each do |the_entry|
-                                    new_object = record[:parent].add_child(the_entry, options)
+                                    if the_entry.is_any?(::GxG::Database::DetachedHash, ::GxG::Database::PersistedHash)
+                                        new_object = record[:parent].add_child(the_entry, options.merge({:template_uuid => the_entry.uuid}))
+                                    else
+                                        new_object = record[:parent].add_child(the_entry, options)
+                                    end
                                     if the_entry[:content].size > 0
                                         build_queue << {:parent => new_object, :content => the_entry[:content]}
                                     end
